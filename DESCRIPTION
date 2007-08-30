@@ -1,0 +1,11 @@
+Package: OutlierD
+Version: 1.0.1
+Date: 2007-08-02
+Title: Outlier detection using quantile regression on the M-A scatterplots of high-throughput data
+Author: HyungJun Cho <hj4cho@korea.ac.kr>
+Maintainer: Sukwoo Kim <s4kim@korea.ac.kr>
+Depends: R (>= 2.3.0), Biobase, quantreg
+Description: This package detects outliers using quantile regression on the M-A scatterplots of high-throughput data.
+License: GPL version 2 or newer
+URL:http://www.korea.ac.kr/~stat2242/
+biocViews: Microarray, Statistics

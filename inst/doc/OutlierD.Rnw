@@ -1,0 +1,160 @@
+% -*- mode: noweb; noweb-default-code-mode: R-mode; -*-
+%\VignetteIndexEntry{Overview}
+%\VignetteKeywords{outlier detection}
+%\VignetteDepends{OutlierD}
+%\VignettePackage{OutlierD}
+%documentclass[12pt, a4paper]{article}
+\documentclass[12pt]{article}
+
+\usepackage{amsmath,pstricks}
+\usepackage{hyperref}
+\usepackage[authoryear,round]{natbib}
+
+\newcommand{\Rpackage}[1]{{\textit{#1}}}
+
+\textwidth=6.2in
+\textheight=8.5in
+%\parskip=.3cm
+\oddsidemargin=.1in
+\evensidemargin=.1in
+\headheight=-.3in
+
+\author{HyungJun Cho}
+\begin{document}
+\title{How to use the OutlierD Package}
+
+\maketitle
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+It is important to preprocess high-throughput data generated from microarray or
+mass spectrometry experiments in order to obtain a successful analysis. 
+Outlier detection is an important preprocessing step.
+For outlier detection, upper and
+lower fences ($Q3+1.5IQR$ and $Q1-1.5IQR$) of the differences are often used
+in statistics, where $Q1$=lower 25\% quantile, $Q3$=upper 25\% quantile,
+and $IQR=Q3-Q1$. However, heterogenous variability is often observed in
+high-throughput data. By ignoring heterogenous variability and using the fences that are constant over
+all values, we may often miss true outliers and detect false outliers. 
+Therefore, the \Rpackage{OutlierD} package provides various quantile regression techniques 
+(constant, linear, nonlinear, and nonparametric quantile estimators) on the M-A scatterplots,
+accounting for heterogenous variability to detect outliers 
+with low false positive and negative rates in high-throughput data.  
+The \Rpackage{OutlierD} package employs libraries 
+\Rpackage{quantreg} and \Rpackage{Biobase}, which must be installed in advance.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Software Description}
+We use the duplicates (denoted by $X_{1i}$ and $X_{2i}$) from
+the experiments replicated under the same biological and
+experimental condition, where $i = 1, 2, \ldots, n$ and $n$ is the
+number of peptides. $X_{1i}$ and $X_{2i}$ are theoretically
+identical, but in practice have variability, which is particularly
+heterogeneous. The heterogeneity of variability can be seen in a MA
+plot (Figure 1). In the MA plot, M is the difference between
+duplicates and A is the average of them, i.e.,  $M_i =
+\log(X_{1i}/X_{2i}) = \log(X_{1i})-\log(X_{2i})$ and $A_i =(1/2)
+\log(X_{1i}X_{2i}) = (\log(X_{1i})+\log(X_{2i}))/2$. As shown in the
+first panel of Figure 1, the constant fences are not enough to
+detect outliers correctly. Using the constant fences $Q3+1.5IQR$ and
+$Q1-1.5IQR$ for the differences, we can miss many true outliers in
+high levels and select many false outliers in low levels.
+
+To account for the heterogeneity of variability, we utilize quantile
+regression on a M-A scatterplot. The
+$q$-quantile linear regression with $\{(A_i, M_i), i=1, \ldots, n\}$
+is to find the parameters minimizing
+\[
+ \sum_{\{i: M_i \ge \theta_i\}} q |M_i - \theta_i| + \sum_{\{i: M_i < \theta_i\}} (1-q) |M_i - \theta_i|,
+\]
+where $0 < q < 1$ and $\theta_i = \beta_0+\beta_1 A_i$. By applying
+the regression, we compute the 0.25 and 0.75 quantile estimates,
+$Q1(A)$ and $Q3(A)$, of the differences, M, depending on the levels,
+A. Then we construct the lower and upper fences: $Q1(A)-1.5IQR(A)$
+and $Q3(A)+1.5IQR(A)$, where $IQR(A)=Q3(A)-Q1(A)$. To obtain the
+quantile estimates depending on the levels more flexibly, we can
+also utilize nonlinear and nonparametric quantile regression
+approaches. Thus, our developed software {\bf
+OutlierD} provides intensity-level adaptive fences, which are built
+from four quantile regression approaches, including constant
+quantile regression.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Example: LCMS Data}
+We demonstrate the use of the package with a LC/MS data set. 
+This real data set consists of intensity values for 922 peptides and 2 samples.
+To run  \Rpackage{OutlierD}, the data can be prepared as follows.
+
+<<>>=
+library(OutlierD)
+data(lcms)
+x <- log2(lcms) 
+dim(x)
+@
+
+We here took log2-transformation without any other normalizations.
+An appropriate normalization can be taken if needed.
+If the data is ready, \Rpackage{OutlierD} can be run as follows.
+
+<<>>=
+fit1 <- OutlierD(x1=x[,1], x2=x[,2], k=1.5, method="constant")
+fit2 <- OutlierD(x1=x[,1], x2=x[,2], k=1.5, method="linear")
+fit3 <- OutlierD(x1=x[,1], x2=x[,2], k=1.5, method="nonlin")
+fit4 <- OutlierD(x1=x[,1], x2=x[,2], k=1.5, method="nonpar")
+@
+
+The arguments $x1$ and $x2$ are two data vectors for samples, consisting of many elements for peptides or proteins.
+The argument $k (>0)$ is a constant in $Q1-k*IQR$ and $Q3+k*IQR$. To be stringent, give a bigger value for $k$. 
+A user can choose one of four different quantile regression estimators: constant, linear, nonlin, and nonpar.
+Using the options show the following plots. 
+
+\begin{center}
+<<fig=TRUE, echo=FALSE>>=
+par(mfrow=c(2,2), pty="s")
+plot(fit1$x$A, fit1$x$M, pch=".", xlab="A", ylab="M")
+i <- sort.list(fit1$x$A)
+lines(fit1$x$A[i], fit1$x$Q3[i], lty=2); lines(fit1$x$A[i], fit1$x$Q1[i], lty=2)
+lines(fit1$x$A[i], fit1$x$LB[i]); lines(fit1$x$A[i], fit1$x$UB[i])
+title("Constant")
+
+plot(fit2$x$A, fit2$x$M, pch=".", xlab="A", ylab="M")
+i <- sort.list(fit2$x$A)
+lines(fit2$x$A[i], fit2$x$Q3[i], lty=2); lines(fit2$x$A[i], fit2$x$Q1[i], lty=2)
+lines(fit2$x$A[i], fit2$x$LB[i]); lines(fit2$x$A[i], fit2$x$UB[i])
+title("Linear")
+
+plot(fit3$x$A, fit3$x$M, pch=".", xlab="A", ylab="M")
+i <- sort.list(fit3$x$A)
+lines(fit3$x$A[i], fit3$x$Q3[i], lty=2); lines(fit3$x$A[i], fit3$x$Q1[i], lty=2)
+lines(fit3$x$A[i], fit3$x$LB[i]); lines(fit3$x$A[i], fit3$x$UB[i])
+title("Nonlinear")
+
+plot(fit4$x$A, fit4$x$M, pch=".", xlab="A", ylab="M")
+i <- sort.list(fit4$x$A)
+lines(fit4$x$A[i], fit4$x$Q3[i], lty=2); lines(fit4$x$A[i], fit4$x$Q1[i], lty=2)
+lines(fit4$x$A[i], fit4$x$LB[i]); lines(fit4$x$A[i], fit4$x$UB[i])
+title("Nonparametric")
+@
+\end{center}
+
+Constant quantile regression is the simplest, whereas nonparametric quantile regression is the most complex.
+The above objects (fit1, fit2, fit3, and fit4) contain the outputs. To see outliers detected, for example, type:
+
+
+<<>>=
+fit3$n.outliers
+
+fit3$x
+@
+
+The outliers detected by nonlinear quantile regression are indicated in the first column.
+Using nonlinear quantile regression, 14 outliers were detected.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+This package is designed to detect outliers using quantile regression on the M-A scatterplots of high-throughput data.
+According to the degree of heterogeneous variability, 
+one of constant, linear, nonlinear, and nonparametric quantile estimators can be chosen.
+\end{document}
