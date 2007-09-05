@@ -144,8 +144,8 @@ The above objects (fit1, fit2, fit3, and fit4) contain the outputs. To see outli
 
 <<>>=
 fit3$n.outliers
-
-fit3$x
+dim(fit3$x)
+head(fit3$x)
 @
 
 The outliers detected by nonlinear quantile regression are indicated in the first column.
