@@ -1,5 +1,5 @@
 Package: OutlierD
-Version: 1.55.0
+Version: 1.55.1
 Date: 2007-08-02
 Title: Outlier detection using quantile regression on the M-A
         scatterplots of high-throughput data
@@ -11,3 +11,4 @@ Description: This package detects outliers using quantile regression on
 License: GPL (>= 2)
 URL: http://www.korea.ac.kr/~stat2242/
 biocViews: Microarray
+PackageStatus: Deprecated
